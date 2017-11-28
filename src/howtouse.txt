@@ -1,0 +1,1 @@
+python marketCapCollector.py ./confAll.xml
