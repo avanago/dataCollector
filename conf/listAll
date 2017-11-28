@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<data>
+    <XMLlife>10</XMLlife>
+    <outfolder>./saveData/</outfolder>
+    <timeStep>60</timeStep>
+    <selectCurrency>
+        <item>allcurrencies</item>
+    </selectCurrency>
+</data>
