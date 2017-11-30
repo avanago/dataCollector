@@ -92,7 +92,7 @@ if __name__ == '__main__':
                         lastupdate[currency] = int(c['last_updated'])
                         print(': updated value')
                         with open(pathM, "a") as myfile:
-                            myfile.write(json.dumps(message))
+                            myfile.write(json.dumps(c))
                             myfile.write('\n')
 
             # Branch 2 - XML contains a list of currency
