@@ -4,21 +4,23 @@
 #
 # this file creates a class able to connect to collect data from gdax
 
+# TO DO: divide in two subclasses - snapshotter and follower
+
 import json
 from websocket import create_connection, WebSocketConnectionClosedException
 from gdax.public_client import PublicClient
 from bintrees import RBTree
 from decimal import Decimal
-
+import requests
 
 
 class obook(object):
 
-    def __init__(self,saveMessage = 0):
+    def __init__(self,saveMessage = 0,product_id = 'BTC-USD'):
 
         self.url = "wss://ws-feed.gdax.com/"
         self.ws = create_connection(self.url)
-        self.product_id = 'BTC-USD'
+        self.product_id = product_id
         self.sequence = -1
         self.stop = False
         self._sequence = -1
@@ -27,7 +29,10 @@ class obook(object):
         self._bids = RBTree()
         self._current_ticker = None
         self.saveMessage = saveMessage
-
+        self.t1 = None
+        self.t2 = None
+        self.t3 = None
+        
     def saveMessage(self,msg):
         ### To be done - save live message in file
         path = 'xxx'
@@ -42,7 +47,7 @@ class obook(object):
         
     def connect(self):
         print('connessione')
-        sub_params = {'type': 'subscribe', 'product_ids': ["BTC-USD"]}
+        sub_params = {'type': 'subscribe', 'product_ids': [product_id]}
         self.ws.send(json.dumps(sub_params))
         sub_params = {"type": "heartbeat", "on": False}
         self.ws.send(json.dumps(sub_params))
@@ -71,16 +76,31 @@ class obook(object):
     def reset_book(self):
         self._asks = RBTree()
         self._bids = RBTree()
-        res = self._client.get_product_order_book(product_id=self.product_id, level=3)
+        self.tref = datetime.datetime.now()
+        # res = self._client.get_product_order_book(product_id=self.product_id, level=3)
+        ##################
+        params = {'level': 3}
+        r = requests.get('https://api.gdax.com/products/{}/book'
+                         .format(self.product_id), params=params, timeout=30)
+        try:
+            res = r.json()
+        except:
+            res['bids'] = {}
+            res['asks'] = {}
+            res['sequence'] = 0
+        # r.raise_for_status()
+
+        
+        ##################
         for bid in res['bids']:
-            self.add({
+            self.add1({
                 'id': bid[2],
                 'side': 'buy',
                 'price': Decimal(bid[0]),
                 'size': Decimal(bid[1])
             })
         for ask in res['asks']:
-            self.add({
+            self.add1({
                 'id': ask[2],
                 'side': 'sell',
                 'price': Decimal(ask[0]),
@@ -115,7 +135,35 @@ class obook(object):
             self.change(message)        
 
 
+    def get_current_book_serializable(self):
+        result = {
+            'sequence': self._sequence,
+            'asks': [],
+            'bids': [],
+        }
+        for ask in self._asks:
+            try:
+                # There can be a race condition here, where a price point is removed
+                # between these two ops
+                this_ask = self._asks[ask]
+            except KeyError:
+                continue
+            for order in this_ask:
+                result['asks'].append([float(order['price']), float(order['size']), order['id']])
+        for bid in self._bids:
+            try:
+                # There can be a race condition here, where a price point is removed
+                # between these two ops
+                this_bid = self._bids[bid]
+            except KeyError:
+                continue
 
+            for order in this_bid:
+                result['bids'].append([float(order['price']), float(order['size']), order['id']])
+        return result
+
+            
+            
     def get_current_book(self):
         result = {
             'sequence': self._sequence,
@@ -230,7 +278,29 @@ class obook(object):
     def get_current_ticker(self):
         return self._current_ticker
     
-    
+########################################    
+    def add1(self, order):
+        order = {
+            'id': order.get('order_id') or order['id'],
+            'side': order['side'],
+            'price': float(order['price']),
+            'size': float(order.get('size') or order['remaining_size'])
+        }
+        if order['side'] == 'buy':
+            bids = self.get_bids(order['price'])
+            if bids is None:
+                bids = [order]
+            else:
+                bids.append(order)
+            self.set_bids(order['price'], bids)
+        else:
+            asks = self.get_asks(order['price'])
+            if asks is None:
+                asks = [order]
+            else:
+                asks.append(order)
+            self.set_asks(order['price'], asks)      
+########################################    
     
     def add(self, order):
         order = {
@@ -265,21 +335,57 @@ class obook(object):
     
     def set_asks(self, price, asks):
         self._asks.insert(price, asks)    
-
-
-
-
-
-
+        
+        
 if __name__ == "__main__":
-import time
+    import time
 
-sleepTime = 5
-ob = obook()
 
-# product_id = 'BTC-USD'
-while 1:
-    ob.get_snapshot()
-    booklive = ob.get_current_book()
-    print ob._sequence
-    time.sleep(sleepTime)
+
+    import json
+
+    import time
+    import datetime
+
+    print('Start gdax collection...')
+
+    outFolder = '/home/andre/tmp/'
+    ob_btc = obook(product_id = 'BTC-USD')
+    ob_eth = obook(product_id = 'ETH-USD')
+    ob_ltc = obook(product_id = 'LTC-USD')
+
+    booklive = dict()
+    sleepTime = 4
+
+    print ('Initialization Complete...')
+    while 1:
+        
+        timeStamp = datetime.datetime.now()
+
+        
+        print('Start Iteration... '+ str(datetime.datetime.now()))
+        
+        ob_btc.get_snapshot()
+        booklive['BTC-USD'] = ob_btc.get_current_book_serializable()
+        booklive['BTC-USD']['Tref'] = ob_btc.tref.strftime('%s')
+        print('BTC-USD complete')
+        
+        ob_eth.get_snapshot()
+        booklive['ETH-USD'] = ob_eth.get_current_book_serializable()
+        booklive['ETH-USD']['Tref'] = ob_eth.tref.strftime('%s')
+        print('ETH-USD complete')
+        
+        ob_ltc.get_snapshot()
+        booklive['LTC-USD'] = ob_ltc.get_current_book_serializable()
+        booklive['LTC-USD']['Tref'] = ob_ltc.tref.strftime('%s')
+        print('LTC-USD complete')
+        
+        Fname = timeStamp.strftime('%Y%m%d')
+        pathM = outFolder + Fname + '_gdaxSampler.json'
+
+        with open (pathM,'a') as fileIO:
+            fileIO.write(json.dumps(booklive))    
+
+        print('End Iteration... '+ str(datetime.datetime.now()))
+        time.sleep(10*60)
+        
