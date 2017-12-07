@@ -1,6 +1,14 @@
-
+import requests
+import json
 
 class orderManager(self):
+    def __init__(self,auth):
+        self.auth = auth
+        self.url ='https://api.gdax.com'
+        
+    def renewAuth(self,auth):
+        self.auth = auth
+    
     def buy(self, **kwargs):
         kwargs["side"] = "buy"
         if "product_id" not in kwargs:
