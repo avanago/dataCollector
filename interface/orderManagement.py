@@ -2,18 +2,19 @@ import requests
 import json
 
 class orderManager(self):
-    def __init__(self,auth):
+    def __init__(self, auth, prodTrader=False):
         self.auth = auth
-        self.url ='https://api.gdax.com'
+        if prodTrader:
+            self._url = 'https://api.gdax.com'
+        else:
+            self._url = 'https://api-public.sandbox.gdax.com'
         
     def renewAuth(self,auth):
         self.auth = auth
     
     def buy(self, **kwargs):
         kwargs["side"] = "buy"
-        if "product_id" not in kwargs:
-            kwargs["product_id"] = self.product_id
-        r = requests.post(self.url + '/orders',
+        r = requests.post(self._url + '/orders',
                           data=json.dumps(kwargs),
                           auth=self.auth,
                           timeout=30)
@@ -21,31 +22,31 @@ class orderManager(self):
 
     def sell(self, **kwargs):
         kwargs["side"] = "sell"
-        r = requests.post(self.url + '/orders',
+        r = requests.post(self._url + '/orders',
                           data=json.dumps(kwargs),
                           auth=self.auth,
                           timeout=30)
         return r.json()
 
     def cancel_order(self, order_id):
-        r = requests.delete(self.url + '/orders/' + order_id, auth=self.auth, timeout=30)
+        r = requests.delete(self._url + '/orders/' + order_id, auth=self.auth, timeout=30)
         return r.json()
 
     def cancel_all(self, product_id=''):
-        url = self.url + '/orders/'
+        _url = self._url + '/orders/'
         if product_id:
-            url += "?product_id={}&".format(str(product_id))
-        r = requests.delete(url, auth=self.auth, timeout=30)
+            _url += "?product_id={}&".format(str(product_id))
+        r = requests.delete(_url, auth=self.auth, timeout=30)
         return r.json()
 
     def get_order(self, order_id):
-        r = requests.get(self.url + '/orders/' + order_id, auth=self.auth, timeout=30)
+        r = requests.get(self._url + '/orders/' + order_id, auth=self.auth, timeout=30)
         return r.json()
 
     def get_orders(self, product_id=''):
         result = []
-        url = self.url + '/orders/'
+        _url = self._url + '/orders/'
         if product_id:
-            url += "?product_id={}&".format(product_id)
-        r = requests.get(url, auth=self.auth, timeout=30)
+            _url += "?product_id={}&".format(product_id)
+        r = requests.get(_url, auth=self.auth, timeout=30)
         return result
