@@ -19,7 +19,7 @@ passphrase = 'xxx'
 coinbase_account_id = 'xxx'
 
 auth  = CoinbaseExchangeAuth(api_key, secret_key, passphrase)
-coinbase =coinbaseAccount(auth, coinbase_account_id):
+coinbase =coinbaseAccount(auth, coinbase_account_id)
 order = orderManager(auth)
 
 
@@ -33,7 +33,7 @@ pp.pprint(coinbaseResponse)
 createOrder = { "size": "0.01",
                 "price": "0.100",
                 "side": "buy",
-                "product_id": "BTC-USD"
+                "product_id": "BTC-USD",
                 "type":'limit'
                }
 createOrderResponse = order.buy(createOrder)
@@ -58,18 +58,18 @@ pp.pprint(cancelOrderResponse)
 createOrder = { "size": "0.01",
                 "price": "10000000000",
                 "side": "sell",
-                "product_id": "BTC-USD"
+                "product_id": "BTC-USD",
                 "type":'limit'
                }
 
-createOrderResponse = order.sell(self, createOrder)
+createOrderResponse = order.sell(createOrder)
 order_id = createOrderResponse['id']
 pp.pprint(createOrderResponse)
 
 
 # Step 6
 # verify the sell order
-getOrderResponse = order.cancel_order(order_id)
+getOrderResponse = order.get_order(order_id)
 pp.pprint(getOrderResponse)
 
 
@@ -83,14 +83,14 @@ pp.pprint(getCancelResponse)
 # place 7 order 
 
 createOrder = { "size": "0.01",
-                "price": "10000000000",
+                "price": "60000",
                 "side": "sell",
-                "product_id": "BTC-USD"
+                "product_id": "BTC-USD",
                 "type":'limit'
                }
 
 for i in range(7):
-    createOrderResponse = order.sell(self, createOrder)
+    createOrderResponse = order.sell(createOrder)
     order_id = createOrderResponse['id']
     pp.pprint(createOrderResponse)
 
