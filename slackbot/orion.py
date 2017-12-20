@@ -8,8 +8,7 @@ import datetime
 
 
 # instantiate Slack client
-# slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
-slack_client = SlackClient('xoxb-288406591671-EYnBHz5NSp3jQ89MKA2zo4QC')
+slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
 
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
@@ -159,7 +158,7 @@ def evaluateDiff():
                     print (stringa)
                     slack_client.api_call(
                         "chat.postMessage",
-                        channel='C8G63MA2J',
+                        channel='C8G63MA2G',
                         text=stringa
                     )
 
