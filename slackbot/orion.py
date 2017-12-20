@@ -15,7 +15,7 @@ slack_client = SlackClient('token')
 starterbot_id = None
 
 # constants
-RTM_READ_DELAY = 4 # 1 second delay between reading from RTM
+RTM_READ_DELAY = 3 # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "getcurrency"
 MENTION_REGEX = "^<@(|[WU].+)>(.*)"
 
