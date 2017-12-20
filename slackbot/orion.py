@@ -3,7 +3,6 @@ import time
 import re
 from slackclient import SlackClient
 import requests
-from command import messageHandler
 import pandas as pd
 import datetime
 
@@ -16,7 +15,7 @@ slack_client = SlackClient('token')
 starterbot_id = None
 
 # constants
-RTM_READ_DELAY = 2 # 1 second delay between reading from RTM
+RTM_READ_DELAY = 3 # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "getcurrency"
 MENTION_REGEX = "^<@(|[WU].+)>(.*)"
 
@@ -147,48 +146,36 @@ def evaluateDiff():
         for e in dfTMP.columns:
             if e in fullDF.columns:
                 differenza = 100 * (float(dfTMP.loc[timeStamp][e]) - float(fullDF.loc[ref][e])) / float(fullDF.loc[ref][e])
+                minuteDistance = (timeStamp-ref).seconds/60
+
+                
                 # print (e)
                 stringa = 'Attuale: ' + str(float(dfTMP.loc[timeStamp][e])) + ' , Precedente: ' + str(
                     float(fullDF.loc[ref][e])) + ' , Differenza: ' + str(differenza)
                 # print (stringa)
 
-                if differenza > 5:
-                    stringa = e + ': ' + str(differenza) + '% negli ultimi ' + str(delayM) + ' minuti'
+                if differenza > 10 or differenza < -10:
+                    stringa = '{}: {:+.2f}% negli ultimi {} minuti'.format(e,differenza,minuteDistance)
                     print (stringa)
                     slack_client.api_call(
                         "chat.postMessage",
                         channel='***',
                         text=stringa
                     )
-
-                elif differenza < -5:
-                    stringa = e + ': ' + str(differenza) + '% negli ultimi ' + str(delayM) + ' minuti'
-                    print (stringa)
-
-                    slack_client.api_call(
-                        "chat.postMessage",
-                        channel='***',
-                        text=stringa
-                    )
-
 
 
 
 #### MAIN LOOP
 if __name__ == "__main__":
-    mHandler = messageHandler()
     if slack_client.rtm_connect(with_team_state=False):
         print("Starter Bot connected and running!")
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
         while True:
             command, channel = parse_bot_commands(slack_client.rtm_read())
-            if command=='reload':
-                del mHandler
-                reload(messageHandler)
-                mHandler = messageHandler()
 
-            elif command:
+
+            if command:
                 handle_command(command, channel)
                 # mHandler.gigio(slack_client,channel,command)
             print(cont)
