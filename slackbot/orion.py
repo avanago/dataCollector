@@ -9,7 +9,7 @@ import datetime
 
 # instantiate Slack client
 # slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
-slack_client = SlackClient('token')
+slack_client = SlackClient('xoxb-288406591671-EYnBHz5NSp3jQ89MKA2zo4QC')
 
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
@@ -159,7 +159,7 @@ def evaluateDiff():
                     print (stringa)
                     slack_client.api_call(
                         "chat.postMessage",
-                        channel='***',
+                        channel='C8G63MA2J',
                         text=stringa
                     )
 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
             if command:
                 handle_command(command, channel)
                 # mHandler.gigio(slack_client,channel,command)
-            print(cont)
+#            print(cont)
 
             if cont > 300:
                 evaluateDiff()
