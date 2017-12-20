@@ -3,8 +3,16 @@ import time
 import re
 from slackclient import SlackClient
 import requests
+from command import messageHandler
+import pandas as pd
+import datetime
 
-slack_client = SlackClient('TOKEN')
+
+# instantiate Slack client
+# slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
+
+slack_client = SlackClient('Token')
+
 
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
@@ -14,6 +22,7 @@ RTM_READ_DELAY = 2 # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "getcurrency"
 MENTION_REGEX = "^<@(|[WU].+)>(.*)"
 
+cont = 0
 CurrencyStats = 'getstats'
 
 #################
@@ -56,6 +65,9 @@ def handle_command(command, channel):
     if command.startswith('help'):
         response = 'List of Available Commands:\ntop10 --> get top 10 currencies\ngetstats [currency1] [currency2] ... --> get specific currency'
 
+    elif 'troia' in command:
+        response = 'Barsotti Gay'
+
     elif command.startswith('saluta'):
         response = 'Ciao ragazzi sono Orion! Potete chiamarmi per richiedere informazioni riguardo le quotazioni delle monete...'
 
@@ -95,18 +107,105 @@ def handle_command(command, channel):
     )
 
 
+def evaluateDiff():
+
+    # init
+    if os.path.isfile('./data.csv'):
+        fullDF = pd.DataFrame.from_csv('./data.csv')
+    else:
+        fullDF = pd.DataFrame()
+    baseURL = 'https://api.coinmarketcap.com/v1/ticker/'
+
+    # processing
+
+    timeStamp = datetime.datetime.now()
+    message = requests.get(baseURL).json()
+
+    data = [timeStamp]
+    col = ['TimeStamp']
+    for c in message:
+        name = c['name']
+        price = c['price_usd']
+
+        data.append(price)
+        col.append(name)
+
+    dfTMP = pd.DataFrame([data], columns=col)
+    dfTMP.set_index('TimeStamp', inplace=True)
+
+
+    fullDF = fullDF.append(dfTMP)
+    fullDF.to_csv('./data.csv')
+
+    # Analysis Data
+
+    delay = 5 * 60  # in S
+    delayM = delay / 60
+
+    a = (timeStamp - fullDF.index).seconds > delay
+    listPosition = [i for i in range(len(a)) if a[i] == True]
+
+    if len(listPosition) > 0:
+        position = max(listPosition)
+        ref = fullDF.index[position]
+
+        for e in dfTMP.columns:
+            if e in fullDF.columns:
+                differenza = 100 * (float(dfTMP.loc[timeStamp][e]) - float(fullDF.loc[ref][e])) / float(fullDF.loc[ref][e])
+                # print (e)
+                stringa = 'Attuale: ' + str(float(dfTMP.loc[timeStamp][e])) + ' , Precedente: ' + str(
+                    float(fullDF.loc[ref][e])) + ' , Differenza: ' + str(differenza)
+                # print (stringa)
+
+                if differenza > 5:
+                    stringa = e + ': ' + str(differenza) + '% negli ultimi ' + str(delayM) + ' minuti'
+                    print (stringa)
+                    slack_client.api_call(
+                        "chat.postMessage",
+                        channel='***',
+                        text=stringa
+                    )
+
+                elif differenza < -5:
+                    stringa = e + ': ' + str(differenza) + '% negli ultimi ' + str(delayM) + ' minuti'
+                    print (stringa)
+
+                    slack_client.api_call(
+                        "chat.postMessage",
+                        channel='***',
+                        text=stringa
+                    )
+
+
+
+
 #### MAIN LOOP
 if __name__ == "__main__":
+    mHandler = messageHandler()
     if slack_client.rtm_connect(with_team_state=False):
         print("Starter Bot connected and running!")
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
         while True:
             command, channel = parse_bot_commands(slack_client.rtm_read())
-            if command:
+            if command=='reload':
+                del mHandler
+                reload(messageHandler)
+                mHandler = messageHandler()
+
+            elif command:
                 handle_command(command, channel)
+            print(cont)
+
+            if cont > 300:
+                evaluateDiff()
+                cont = 0
+
 
             time.sleep(RTM_READ_DELAY)
+
+            cont = cont + RTM_READ_DELAY
+
     else:
         print("Connection failed. Exception traceback printed above.")
 
