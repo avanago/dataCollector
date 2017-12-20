@@ -154,7 +154,7 @@ def evaluateDiff():
                     float(fullDF.loc[ref][e])) + ' , Differenza: ' + str(differenza)
                 # print (stringa)
 
-                if differenza > 10 or differenza < -10:
+                if differenza > 7.5 or differenza < -7.5:
                     stringa = '{}: {:+.2f}% negli ultimi {} minuti'.format(e,differenza,minuteDistance)
                     print (stringa)
                     slack_client.api_call(
