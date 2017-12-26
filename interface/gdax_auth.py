@@ -1,10 +1,3 @@
-# Requires python-requests. Install with pip:
-#
-#   pip install requests
-#
-# or, with easy-install:
-#
-#   easy_install requests
 
 import json, hmac, hashlib, time, requests, base64
 from requests.auth import AuthBase
